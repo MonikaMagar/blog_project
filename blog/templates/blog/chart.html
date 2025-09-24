@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - DogBlog</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding-top: 2rem;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            padding: 2rem 0 3rem 0;
+            color: white;
+            position: relative;
+        }
+
+        .dashboard-title {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .dashboard-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transform: translateY(30px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24, #feca57, #48dbfb);
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        /* Main chart container - reduced height */
+        .main-chart-container {
+            height: 300px;
+        }
+
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Side charts - smaller containers */
+        .chart-grid .chart-container {
+            height: 250px;
+            padding: 1rem;
+        }
+
+        .chart-grid .chart-title {
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            color: #667eea;
+        }
+
+        .floating-elements {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-icon {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.05;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .floating-icon:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .floating-icon:nth-child(2) { top: 20%; right: 10%; animation-delay: 2s; }
+        .floating-icon:nth-child(3) { bottom: 30%; left: 15%; animation-delay: 4s; }
+        .floating-icon:nth-child(4) { bottom: 10%; right: 20%; animation-delay: 6s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(10deg); }
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .insight-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .insight-text {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 1024px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-grid .chart-container {
+                height: 200px;
+            }
+            
+            .main-chart-container {
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding: 0 1rem;
+            }
+            
+            .back-button {
+                top: 1rem;
+                left: 1rem;
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .dashboard-header {
+                padding: 1rem 0 2rem 0;
+            }
+            
+            .chart-grid .chart-container {
+                height: 180px;
+            }
+            
+            .main-chart-container {
+                height: 200px;
+            }
+        }
+
+        /* Custom Chart Styles */
+        .chart-container canvas {
+            border-radius: 10px;
+            max-height: 100%;
+        }
+
+        /* Loading Animation */
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            padding: 2rem;
+        }
+
+        .spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Background Elements -->
+    <div class="floating-elements">
+        <div class="floating-icon">📊</div>
+        <div class="floating-icon">📈</div>
+        <div class="floating-icon">🐕</div>
+        <div class="floating-icon">📋</div>
+    </div>
+
+    <!-- Back Button -->
+    <a href="/" class="back-button">← Back to Home</a>
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">📊 Dog Blog Analytics</h1>
+        <p class="dashboard-subtitle">Insights into your blog's performance and content</p>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Stats Overview -->
+        <div class="stats-overview">
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <span class="stat-number" id="total-posts">0</span>
+                <div class="stat-label">Total Posts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📏</div>
+                <span class="stat-number" id="avg-length">0</span>
+                <div class="stat-label">Avg. Length</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <span class="stat-number" id="longest-post">0</span>
+                <div class="stat-label">Longest Post</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <span class="stat-number" id="engagement">95%</span>
+                <div class="stat-label">Engagement</div>
+            </div>
+        </div>
+
+        <!-- Main Chart -->
+        <div class="chart-container main-chart-container">
+            <h3 class="chart-title">📈 Post Length Analysis</h3>
+            <canvas id="postChart"></canvas>
+        </div>
+
+        <!-- Chart Grid -->
+        <div class="chart-grid">
+            <div class="chart-container">
+                <h3 class="chart-title">🥧 Content Distribution</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3 class="chart-title">📈 Growth Trend</h3>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Insights Card -->
+        <div class="insight-card">
+            <h3 class="insight-title">💡 Key Insights</h3>
+            <p class="insight-text">Your blog shows consistent engagement with well-balanced content lengths. Dog-related posts tend to perform better with 200-400 character sweet spot for maximum reader engagement.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sample data - replace with Django template variables
+        const sampleTitles = ['My First Dog', 'Training Tips', 'Best Dog Foods', 'Puppy Care', 'Dog Parks', 'Grooming Guide'];
+        const sampleLengths = [245, 389, 156, 423, 298, 367];
+
+        // Animation timeline
+        const tl = gsap.timeline();
+        
+        // Animate elements
+        tl.to('.dashboard-title', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+          .to('.dashboard-subtitle', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.3');
+
+        // Animate stat cards
+        gsap.utils.toArray('.stat-card').forEach((card, i) => {
+            gsap.to(card, {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                delay: i * 0.1 + 0.5
+            });
+        });
+
+        // Animate chart containers
+        gsap.utils.toArray('.chart-container').forEach((container, i) => {
+            gsap.to(container, {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                delay: i * 0.2 + 1
+            });
+        });
+
+        // Animate insight card
+        gsap.to('.insight-card', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out', delay: 1.5 });
+
+        // Update stats with animation
+        function animateCounter(element, target, suffix = '') {
+            gsap.to({ value: 0 }, {
+                value: target,
+                duration: 2,
+                ease: 'power3.out',
+                onUpdate: function() {
+                    element.textContent = Math.round(this.targets()[0].value) + suffix;
+                },
+                delay: 0.5
+            });
+        }
+
+        // Calculate and animate stats
+        setTimeout(() => {
+            const totalPosts = sampleLengths.length;
+            const avgLength = Math.round(sampleLengths.reduce((a, b) => a + b, 0) / sampleLengths.length);
+            const longestPost = Math.max(...sampleLengths);
+
+            animateCounter(document.getElementById('total-posts'), totalPosts);
+            animateCounter(document.getElementById('avg-length'), avgLength);
+            animateCounter(document.getElementById('longest-post'), longestPost);
+        }, 1000);
+
+        // Chart configurations
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.color = '#6c757d';
+
+        // Main Bar Chart
+        const ctx = document.getElementById('postChart').getContext('2d');
+        const postChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: sampleTitles,
+                datasets: [{
+                    label: 'Post Length (characters)',
+                    data: sampleLengths,
+                    backgroundColor: [
+                        'rgba(255, 107, 107, 0.8)',
+                        'rgba(72, 219, 251, 0.8)',
+                        'rgba(254, 202, 87, 0.8)',
+                        'rgba(238, 90, 36, 0.8)',
+                        'rgba(102, 126, 234, 0.8)',
+                        'rgba(118, 75, 162, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 107, 107, 1)',
+                        'rgba(72, 219, 251, 1)',
+                        'rgba(254, 202, 87, 1)',
+                        'rgba(238, 90, 36, 1)',
+                        'rgba(102, 126, 234, 1)',
+                        'rgba(118, 75, 162, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            padding: 8,
+                            font: { size: 10 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            padding: 8,
+                            maxRotation: 0,
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Pie Chart
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        const pieChart = new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Short Posts', 'Medium Posts', 'Long Posts'],
+                datasets: [{
+                    data: [2, 3, 1],
+                    backgroundColor: [
+                        'rgba(255, 107, 107, 0.8)',
+                        'rgba(72, 219, 251, 0.8)',
+                        'rgba(254, 202, 87, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 107, 107, 1)',
+                        'rgba(72, 219, 251, 1)',
+                        'rgba(254, 202, 87, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            usePointStyle: true,
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+
+        // Line Chart
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Posts Created',
+                    data: [1, 2, 1, 3, 2, 4],
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                    pointBorderColor: 'white',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        ticks: {
+                            font: { size: 10 }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                animation: {
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    </script>
+</body>
+</html>

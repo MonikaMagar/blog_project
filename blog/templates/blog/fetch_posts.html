@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetched Posts - DogBlog</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding-top: 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            padding: 3rem 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="paws" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M10 5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm-3 5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm6 0c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm-3 2c.8 0 1.5.7 1.5 1.5s-.7 1.5-1.5 1.5-1.5-.7-1.5-1.5.7-1.5 1.5-1.5z" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23paws)"/></svg>') repeat;
+            opacity: 0.1;
+        }
+
+        .page-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 2;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .posts-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .post-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .post-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24, #feca57, #48dbfb);
+        }
+
+        .post-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .post-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-body {
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .post-author {
+            display: flex;
+            align-items: center;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .author-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .post-id {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .api-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(72, 219, 251, 0.1);
+            color: #48dbfb;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(72, 219, 251, 0.3);
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-bar {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-item {
+            display: inline-block;
+            margin: 0 2rem;
+            color: #495057;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #667eea;
+            display: block;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 2rem;
+            left: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50px;
+            padding: 0.75rem 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            color: #667eea;
+        }
+
+        .floating-elements {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .floating-paw {
+            position: absolute;
+            font-size: 1.5rem;
+            opacity: 0.05;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .floating-paw:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .floating-paw:nth-child(2) { top: 20%; right: 10%; animation-delay: 2s; }
+        .floating-paw:nth-child(3) { bottom: 30%; left: 15%; animation-delay: 4s; }
+        .floating-paw:nth-child(4) { bottom: 10%; right: 20%; animation-delay: 6s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(10deg); }
+        }
+
+        @media (max-width: 768px) {
+            .posts-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .posts-container {
+                padding: 0 1rem;
+            }
+            
+            .page-header {
+                padding: 2rem 0;
+            }
+            
+            .back-button {
+                top: 1rem;
+                left: 1rem;
+                padding: 0.5rem 1rem;
+            }
+            
+            .stat-item {
+                margin: 0 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating Background Elements -->
+    <div class="floating-elements">
+        <div class="floating-paw">🐾</div>
+        <div class="floating-paw">🐾</div>
+        <div class="floating-paw">🐾</div>
+        <div class="floating-paw">🐾</div>
+    </div>
+
+    <!-- Back Button -->
+    <a href="/" class="back-button">← Back to Home</a>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">🌐 Fetched Posts</h1>
+        <p class="page-subtitle">Explore content from external APIs</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="posts-container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-number" id="post-count">0</span>
+                <span>Posts Loaded</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="author-count">0</span>
+                <span>Authors</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number">API</span>
+                <span>Data Source</span>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading amazing posts...</p>
+        </div>
+
+        <!-- Posts Grid -->
+        <div class="posts-grid">
+            <!-- Sample posts for demo -->
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">sunt aut facere repellat provident occaecati excepturi optio reprehenderit</h3>
+                <p class="post-body">quia et suscipit suscipit recusandae consequuntur expedita et cum reprehenderit molestiae ut ut quas totam nostrum rerum est autem sunt rem eveniet architecto...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U1</div>
+                        <span>User 1</span>
+                    </div>
+                    <div class="post-id">ID: 1</div>
+                </div>
+            </div>
+
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">qui est esse</h3>
+                <p class="post-body">est rerum tempore vitae sequi sint nihil reprehenderit dolor beatae ea dolores neque fugiat blanditiis voluptate porro vel nihil molestiae ut reiciendis qui aperiam non debitis...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U1</div>
+                        <span>User 1</span>
+                    </div>
+                    <div class="post-id">ID: 2</div>
+                </div>
+            </div>
+
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">ea molestias quasi exercitationem repellat qui ipsa sit aut</h3>
+                <p class="post-body">et iusto sed quo iure voluptatem occaecati omnis eligendi aut ad voluptatem doloribus vel accusantium quis pariatur molestiae porro eius odio et labore et velit aut...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U1</div>
+                        <span>User 1</span>
+                    </div>
+                    <div class="post-id">ID: 3</div>
+                </div>
+            </div>
+
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">eum et est occaecati</h3>
+                <p class="post-body">ullam et saepe reiciendis voluptatem adipisci sit amet autem assumenda provident rerum culpa quis hic commodi nesciunt rem tenetur doloremque ipsam iure quis sunt voluptatem rerum illo velit...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U1</div>
+                        <span>User 1</span>
+                    </div>
+                    <div class="post-id">ID: 4</div>
+                </div>
+            </div>
+
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">nesciunt quas odio</h3>
+                <p class="post-body">repudiandae veniam quaerat sunt sed alias aut fugiat sit autem sed est voluptatem omnis possimus esse voluptatibus quis est aut tenetur dolor neque...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U2</div>
+                        <span>User 2</span>
+                    </div>
+                    <div class="post-id">ID: 5</div>
+                </div>
+            </div>
+
+            <div class="post-card">
+                <div class="api-badge">API</div>
+                <h3 class="post-title">dolorem eum magni eos aperiam quia</h3>
+                <p class="post-body">ut aspernatur corporis harum nihil quis provident sequi mollitia nobis aliquid molestiae perspiciatis et ea nemo ab reprehenderit accusantium quas voluptate dolores velit et doloremque molestiae...</p>
+                <div class="post-meta">
+                    <div class="post-author">
+                        <div class="author-avatar">U2</div>
+                        <span>User 2</span>
+                    </div>
+                    <div class="post-id">ID: 6</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animation timeline
+        const tl = gsap.timeline();
+        
+        // Animate page elements
+        tl.to('.page-title', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+          .to('.page-subtitle', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.3')
+          .to('.stats-bar', { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+
+        // Animate post cards
+        gsap.utils.toArray('.post-card').forEach((card, i) => {
+            gsap.to(card, {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                ease: 'power3.out',
+                delay: i * 0.1 + 0.5
+            });
+        });
+
+        // Update stats
+        function updateStats() {
+            const posts = document.querySelectorAll('.post-card');
+            const authors = new Set();
+            
+            posts.forEach(post => {
+                const authorText = post.querySelector('.post-author span').textContent;
+                authors.add(authorText);
+            });
+            
+            // Animate counters
+            gsap.to('#post-count', {
+                textContent: posts.length,
+                duration: 1,
+                ease: 'power2.out',
+                snap: { textContent: 1 }
+            });
+            
+            gsap.to('#author-count', {
+                textContent: authors.size,
+                duration: 1,
+                ease: 'power2.out',
+                delay: 0.2,
+                snap: { textContent: 1 }
+            });
+        }
+
+        // Initialize stats after animations
+        setTimeout(updateStats, 1000);
+
+        // Add hover sound effect (visual feedback)
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                gsap.to(card, { scale: 1.02, duration: 0.3, ease: 'power2.out' });
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, { scale: 1, duration: 0.3, ease: 'power2.out' });
+            });
+        });
+
+        // Smooth scroll behavior
+        document.documentElement.style.scrollBehavior = 'smooth';
+    </script>
+</body>
+</html>
